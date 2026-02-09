@@ -1,0 +1,15 @@
+[package]
+name = "echoserver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+argh = "0.1.14"
+color-eyre = { version = "0.6.5", features = ["url"] }
+irc-proto = "1.1.0"
+lazy_static = "1.5.0"
+rustls-util = "0.0.1"
+tokio = { version = "1.49.0", features = ["full"] }
+tokio-rustls = { version = "0.26.4", features = ["brotli"] }
+tracing = { version = "0.1.44", features = ["async-await", "log"] }
+tracing-subscriber = { version = "0.3.22", features = ["chrono", "json", "serde", "serde_json"] }
