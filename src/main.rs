@@ -28,8 +28,6 @@ struct Options {
     key: PathBuf,
 }
 
-const WORKER_POOL_SIZE: usize = 128;
-
 lazy_static::lazy_static! {
     static ref OPTIONS: Options = argh::from_env();
 }
@@ -46,10 +44,9 @@ async fn main() -> Result<(), Box<dyn StdError + Send + Sync + 'static>> {
         addr,
         cert: OPTIONS.cert.clone(),
         key: OPTIONS.key.clone(),
-        pool_size: WORKER_POOL_SIZE,
     })
     .await?
-    .serve(&OPTIONS, async move |cfg, stream, addr| {
+    .serve(async move |stream, _addr| {
         let (reader, mut writer) = tokio::io::split(stream);
         let mut reader = tokio::io::BufReader::new(reader);
         let mut line = String::new();

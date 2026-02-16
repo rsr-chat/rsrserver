@@ -6,9 +6,7 @@ use std::sync::Arc;
 use color_eyre::eyre::Result;
 use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Semaphore;
 use tokio_rustls::server::TlsStream;
 use tokio_rustls::{TlsAcceptor, rustls};
 
@@ -16,7 +14,6 @@ pub struct TlsServerConfig {
     pub addr: SocketAddr,
     pub cert: PathBuf,
     pub key: PathBuf,
-    pub pool_size: usize,
 }
 
 impl Default for TlsServerConfig {
@@ -25,13 +22,11 @@ impl Default for TlsServerConfig {
             addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 443)),
             cert: PathBuf::new(),
             key: PathBuf::new(),
-            pool_size: 128,
         }
     }
 }
 
 pub struct TlsServer {
-    semaphore: Arc<Semaphore>,
     listener: TcpListener,
     acceptor: TlsAcceptor,
 }
@@ -50,11 +45,7 @@ impl TlsServer {
         // Create the server listener.
         let listener: TcpListener = TcpListener::bind(&cfg.addr).await?;
 
-        // Semaphore to limit concurrent request processing
-        let semaphore = Arc::new(Semaphore::new(cfg.pool_size));
-
         Ok(Self {
-            semaphore,
             listener,
             acceptor,
         })
@@ -119,18 +110,3 @@ impl<T> AsyncFriendly for T where T: Send + Sync + 'static {}
 
 pub trait AsyncFuture<T>: Future<Output = T> + AsyncFriendly {}
 impl<T, O> AsyncFuture<O> for T where T: Future<Output = O> + Send + Sync + 'static {}
-
-async fn send503(mut stream: TlsStream<TcpStream>, message: &str) -> Result<()> {
-    let response = format!(
-        "HTTP/1.0 503 Service Unavailable\r\n\
-        Connection: close\r\n\
-        Content-length: {}\r\n\
-        \r\n\
-        {}",
-        message.len(),
-        message
-    );
-    stream.write_all(response.as_bytes()).await?;
-    stream.shutdown().await?;
-    Ok(())
-}
