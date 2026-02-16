@@ -60,78 +60,57 @@ impl TlsServer {
         })
     }
 
-    pub async fn serve<C, H>(&mut self, cfg: &'static C, handler: H)
+    pub async fn serve<H>(&mut self, mut handler: H)
     where
-        C: AsyncFriendly,
-        H: TlsHandler<C>,
+        H: TlsHandler,
     {
         // Main server loop to process incoming requests.
         loop {
-            if let Err(e) = self.serve_once::<C, H>(&cfg, handler.clone()).await {
+            if let Err(e) = self.serve_once::<H>(&mut handler).await {
                 println!("Error: {e}"); // TODO: Enhance error reporting
             }
         }
     }
 
-    async fn serve_once<C, H>(&mut self, cfg: &'static C, handler: H) -> Result<()>
+    async fn serve_once<H>(&mut self, handler: &mut H) -> Result<()>
     where
-        C: AsyncFriendly,
-        H: TlsHandler<C>,
+        H: TlsHandler,
     {
         let (stream, client_addr) = self.listener.accept().await?;
         let acceptor = self.acceptor.clone();
 
         let accepted_stream = acceptor.accept(stream).await?;
 
-        let semaphore = self.semaphore.clone();
-        match semaphore.clone().try_acquire_owned() {
-            Err(_) => {
-                // No permits available - server at capacity
-                send503(
-                    accepted_stream,
-                    "The server is over capacity. Please try again later.",
-                )
-                .await?;
-            }
-            Ok(permit) => {
-                // Successfully acquired permit, spawn task
-                tokio::spawn(async move {
-                    let _permit = permit; // held until task completes
-                    handler.handle(cfg, accepted_stream, client_addr).await;
-                });
-            }
-        }
+        tokio::spawn(handler.handle(accepted_stream, client_addr));
+
         Ok(())
     }
 }
 
-pub trait TlsHandler<C: AsyncFriendly>: Clone + Send + Sync + 'static {
+pub trait TlsHandler: Send + Sync + 'static {
     type Future: AsyncFuture<()>;
 
     fn handle(
-        &self,
-        cfg: &'static C,
+        &mut self,
         stream: TlsStream<TcpStream>,
         client_addr: SocketAddr,
     ) -> Self::Future;
 }
 
 // Blanket impl for any Fn closure
-impl<C, F, Fut> TlsHandler<C> for F
+impl<F, Fut> TlsHandler for F
 where
-    C: AsyncFriendly,
     Fut: AsyncFuture<()>,
-    F: Fn(&'static C, TlsStream<TcpStream>, SocketAddr) -> Fut + Clone + Send + Sync + 'static,
+    F: Fn(TlsStream<TcpStream>, SocketAddr) -> Fut + Send + Sync + 'static,
 {
     type Future = Fut;
 
     fn handle(
-        &self,
-        cfg: &'static C,
+        &mut self,
         stream: TlsStream<TcpStream>,
         client_addr: SocketAddr,
     ) -> Self::Future {
-        self(cfg, stream, client_addr)
+        self(stream, client_addr)
     }
 }
 
