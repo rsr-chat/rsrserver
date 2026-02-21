@@ -1,7 +1,11 @@
 [package]
-name = "echoserver"
+name = "rsrserver"
 version = "0.1.0"
 edition = "2024"
+license = "AGPL-3.0-only"
+readme = "README.md"
+homepage = "rsr.chat"
+repository = "https://github.com/rsr-chat/rsrserver"
 
 [dependencies]
 argh = "0.1.14"
