@@ -74,7 +74,7 @@ impl<T> IrcContext<'_, T> {
     }
 
     pub async fn send_client<'a>(&'a mut self, msg: &'a Message<'a>) -> IrcResult<()> {
-        self.send_client_unchecked(msg.raw_inner()).await
+        self.send_client_unchecked(msg.input_raw()).await
     }
 
     pub async fn ping_keepalive(&mut self) -> IrcResult<()> {
