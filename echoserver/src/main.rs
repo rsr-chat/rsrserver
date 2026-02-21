@@ -6,11 +6,13 @@ use std::error::Error as StdError;
 
 use argh::FromArgs;
 use color_eyre::eyre::Result;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
-use crate::tlsserver::{TlsServer, TlsServerConfig};
+use crate::{irc::IrcServer, tls::{TlsServer, TlsServerConfig}};
 
-mod tlsserver;
+mod error;
+mod storage;
+mod tls;
+mod irc;
 
 /// Tokio Rustls server example
 #[derive(FromArgs)]
@@ -46,27 +48,7 @@ async fn main() -> Result<(), Box<dyn StdError + Send + Sync + 'static>> {
         key: OPTIONS.key.clone(),
     })
     .await?
-    .serve(async move |stream, _addr| {
-        let (reader, mut writer) = tokio::io::split(stream);
-        let mut reader = tokio::io::BufReader::new(reader);
-        let mut line = String::new();
-
-        loop {
-            line.clear();
-
-            match reader.read_line(&mut line).await.unwrap() {
-                0 => {
-                    // Connection closed
-                    break;
-                }
-                _ => {
-                    // Echo the line back (including the newline)
-                    writer.write_all(line.as_bytes()).await.unwrap();
-                    writer.flush().await.unwrap();
-                }
-            }
-        }
-    })
+    .serve(IrcServer::new(()))
     .await;
 
     Ok(())

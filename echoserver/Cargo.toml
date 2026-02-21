@@ -5,11 +5,19 @@ edition = "2024"
 
 [dependencies]
 argh = "0.1.14"
+bitflags = "2.11.0"
+bytes = "1.11.1"
 color-eyre = { version = "0.6.5", features = ["url"] }
-irc-proto = "1.1.0"
+dashmap = "6.1.0"
+flume = { version = "0.12.0", features = ["select", "async"] }
+ircv3_parse = { path = "../ircv3_parse/" }
 lazy_static = "1.5.0"
+pastey = "0.2.1"
+rand = "0.10.0"
 rustls-util = "0.0.1"
+thiserror = "2.0.18"
 tokio = { version = "1.49.0", features = ["full"] }
 tokio-rustls = { version = "0.26.4", features = ["brotli"] }
+tokio-stream = { version = "0.1.18", features = ["full"] }
 tracing = { version = "0.1.44", features = ["async-await", "log"] }
 tracing-subscriber = { version = "0.3.22", features = ["chrono", "json", "serde", "serde_json"] }
