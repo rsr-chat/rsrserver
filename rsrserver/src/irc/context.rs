@@ -3,7 +3,6 @@ use std::{
     time::Duration,
 };
 
-use bytes::Bytes;
 use ircv3_parse::Message;
 use tokio::{
     io::AsyncWriteExt,
@@ -13,7 +12,7 @@ use tokio_stream::StreamMap;
 
 use crate::{
     error::{IrcResult, IrcSessionError},
-    irc::{ChannelName, ChannelSink, ClientSink, IrcSession, ServerSink, state::Anonymous},
+    irc::{ChannelName, ChannelSink, ClientSink, IrcSession, ServerSink, state::{self, Anonymous}},
 };
 
 pub struct IrcContext<'a, T> {
@@ -105,5 +104,11 @@ impl<T> IrcContext<'_, T> {
 
     pub async fn unknown_command(&mut self, cmd: &str) -> IrcResult<()> {
         todo!();
+    }
+}
+
+impl<'a> IrcContext<'a, state::Anonymous> {
+    pub fn nick(&'a self) -> &'a str {
+        self.state.nick.as_deref().unwrap_or("*")
     }
 }

@@ -11,6 +11,7 @@ repository = "https://github.com/rsr-chat/rsrserver"
 argh = "0.1.14"
 bitflags = "2.11.0"
 bytes = "1.11.1"
+chrono = "0.4.43"
 color-eyre = { version = "0.6.5", features = ["url"] }
 dashmap = "6.1.0"
 flume = { version = "0.12.0", features = ["select", "async"] }

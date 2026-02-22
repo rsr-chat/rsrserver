@@ -196,7 +196,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fac4744fb15ae8337dc853fee7fb3f4e48c0fbaa23d0afe49c447b4fab126118"
 dependencies = [
  "iana-time-zone",
+ "js-sys",
  "num-traits",
+ "wasm-bindgen",
  "windows-link",
 ]
 
@@ -288,29 +290,6 @@ name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
-
-[[package]]
-name = "echoserver"
-version = "0.1.0"
-dependencies = [
- "argh",
- "bitflags",
- "bytes",
- "color-eyre",
- "dashmap",
- "flume",
- "ircv3_parse",
- "lazy_static",
- "pastey",
- "rand",
- "rustls-util",
- "thiserror",
- "tokio",
- "tokio-rustls",
- "tokio-stream",
- "tracing",
- "tracing-subscriber",
-]
 
 [[package]]
 name = "equivalent"
@@ -882,6 +861,30 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rsrserver"
+version = "0.1.0"
+dependencies = [
+ "argh",
+ "bitflags",
+ "bytes",
+ "chrono",
+ "color-eyre",
+ "dashmap",
+ "flume",
+ "ircv3_parse",
+ "lazy_static",
+ "pastey",
+ "rand",
+ "rustls-util",
+ "thiserror",
+ "tokio",
+ "tokio-rustls",
+ "tokio-stream",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

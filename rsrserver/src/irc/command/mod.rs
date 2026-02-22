@@ -1,6 +1,20 @@
 use crate::{error::IrcResult, irc::IrcContext};
 use ircv3_parse::Message;
 
+pub trait CommandHandler<C> {
+    async fn handle<'a>(
+        mut ctx: IrcContext<'a, Self>,
+        _msg: Message<'a>,
+    ) -> IrcResult<IrcContext<'a, Self>>
+    where
+        Self: CommandHandler<C> + Sized,
+    {
+        ctx.send_client_unchecked(":* 451 * :You have not yet registered\r\n")
+            .await?;
+        Ok(ctx)
+    }
+}
+
 macro_rules! commands {
     [$($cmd:ident),+] => {
         $(
@@ -10,11 +24,17 @@ macro_rules! commands {
             }
         )+
 
-        pub async fn _route<'a, T>(mut ctx: IrcContext<'a, T>, msg: Message<'a>) -> IrcResult<IrcContext<'a, T>> {
+        pub async fn _route<'a, T, C>(
+            mut ctx: IrcContext<'a, T>,
+            msg: Message<'a>
+        ) -> IrcResult<IrcContext<'a, T>>
+        where
+            T: CommandHandler<C>
+        {
             pastey::paste! {
                 match msg.command().as_str() {
                     $(
-                        stringify!([<$cmd:upper>]) => todo!(), //$cmd::execute(),
+                        stringify!([<$cmd:upper>]) => T::handle(ctx, msg).await,
                     )+
                     cmd => ctx.unknown_command(cmd).await.map(|_| ctx),
                 }
