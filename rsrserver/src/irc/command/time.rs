@@ -47,7 +47,7 @@ impl Time {
         (now.timestamp(), now.to_rfc3339())
     }
 
-    async fn handle_inner<'a, T: GenericStateExt, S: Storage>(ctx: &mut IrcContext<'a, T, S>, msg: &Message<'a>) -> IrcResult<()> {
+    async fn handle_inner<'a, T: GenericStateExt, S: Storage>(ctx: &mut IrcContext<'a, T, S>, _msg: &Message<'a>) -> IrcResult<()> {
         let (unix_time, time_str) = Self::current();
         let nick = ctx.nick();
         let nick = nick.slice_at_most(40);

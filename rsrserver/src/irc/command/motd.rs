@@ -13,7 +13,7 @@ impl CommandHandler<state::Anonymous> for Motd {
         mut ctx: IrcContext<'a, state::Anonymous, S>,
         _msg: Message<'a>,
     ) -> IrcResult<impl Into<Self::Contract>> {
-        ctx.registration_required();
+        ctx.registration_required().await?;
         Ok(ctx)
     }
 }

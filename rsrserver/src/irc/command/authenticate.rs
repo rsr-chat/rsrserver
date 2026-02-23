@@ -11,7 +11,7 @@ impl CommandHandler<state::Anonymous> for Authenticate {
         mut ctx: IrcContext<'a, state::Anonymous, S>,
         _msg: Message<'a>,
     ) -> IrcResult<impl Into<Self::Contract>> {
-        ctx.registration_required();
+        ctx.registration_required().await?;
         Ok(ctx)
     }
 }
@@ -23,7 +23,7 @@ impl CommandHandler<state::Registered> for Authenticate {
         mut ctx: IrcContext<'a, state::Registered, S>,
         _msg: Message<'a>,
     ) -> IrcResult<impl Into<Self::Contract>> {
-        ctx.registration_required();
+        ctx.registration_required().await?;
         Ok(ctx)
     }
 }
@@ -35,7 +35,7 @@ impl CommandHandler<state::Authenticated> for Authenticate {
         mut ctx: IrcContext<'a, state::Authenticated, S>,
         _msg: Message<'a>,
     ) -> IrcResult<impl Into<Self::Contract>> {
-        ctx.registration_required();
+        ctx.registration_required().await?;
         Ok(ctx)
     }
 }
