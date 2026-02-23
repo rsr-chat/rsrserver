@@ -36,4 +36,12 @@ pub enum IrcSessionError {
 
     #[error("Unsupported CAP Version")]
     UnsupportedCap,
+
+    #[error("Client issued QUIT command. Reason: {0}")]
+    ClientQUIT(String),
+}
+
+pub enum StorageError<E> {
+    
+    Backend(E),
 }

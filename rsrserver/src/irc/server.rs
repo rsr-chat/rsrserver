@@ -13,7 +13,7 @@ use tokio_stream::{StreamExt, StreamMap};
 use crate::{
     error::{IrcResult, IrcSessionError},
     irc::{
-        ChannelName, ChannelSink, ChannelSource, ClientSink, ClientSource, IrcContext, IrcSession, ServerMessage, ServerSink, ServerSource, command, state
+        ChannelName, ChannelSink, ChannelSource, ClientSink, ClientSource, GenericStateExt, IrcContext, IrcSession, ServerMessage, ServerSink, ServerSource, command, state::{self, MaybeTransition, Old, StateInto}
     },
     storage::Storage,
     tls::TlsHandler,
@@ -102,92 +102,83 @@ where
     S: Storage,
 {
     pub async fn run(mut self) {
+        match self.run_inner().await {
+            Ok(()) => panic!("run_inner returned OK!"),
+            Err(e) => self.die_nice(e).await,
+        }
+    }
+
+    async fn run_inner(&mut self) -> IrcResult<()> {
         // Stores data that must be read in from our owned-handle (i.e. Client rx)
         let mut own_buf = Vec::<u8>::new();
 
         // Stores data shared over pipe
         let mut ref_buf = Arc::new(Bytes::new());
 
-        let mut session = IrcSession::default();
-        let mut state = state::Anonymous::default();
+        let mut session = IrcSession::new();
 
-        let e: IrcResult<()> = loop {
-            let next = self.next_incoming(&mut own_buf, &mut ref_buf).await;
-            match next {
-                Ok(Signal::Timeout) => {
-                    let mut ctx = IrcContext::new(
-                        &mut session,
-                        &mut self.r_tx,
-                        &mut self.s_tx,
-                        &mut self.c_tx,
-                        state,
-                    );
-
-                    ctx.ping_keepalive().await.unwrap(); // TODO better error handling
-                    state = ctx.into();
-                }
-                Ok(Signal::Client(msg)) => {
-                    let ctx =IrcContext::new(
-                        &mut session,
-                        &mut self.r_tx,
-                        &mut self.s_tx,
-                        &mut self.c_tx,
-                        state,
-                    );
-
-                    // TODO better error handling
-                    let ctx = command::_route(ctx, msg).await.unwrap(); 
-                    state = ctx.into();
-                }
-                Ok(Signal::Server(msg)) => {
-                    let ctx = IrcContext::new(
-                        &mut session,
-                        &mut self.r_tx,
-                        &mut self.s_tx,
-                        &mut self.c_tx,
-                        state,
-                    );
-
-                    state = ctx.into();
-
-                }
-                Ok(Signal::Channel(_name, msg)) => {
-                    let mut ctx = IrcContext::new(
-                        &mut session,
-                        &mut self.r_tx,
-                        &mut self.s_tx,
-                        &mut self.c_tx,
-                        state,
-                    );
-
-                    // For now, blindly assume the sender has performed
-                    // the full burden of verification and that all messages
-                    // sent over these IPC channels are valid and should
-                    // be sent to anyone subscribed.
-                    //
-                    // ALSO assume the channel message has the proper name
-                    // attached before sending.
-                    ctx.send_client(&msg).await.unwrap(); // TODO better error handling
-                    state = ctx.into();
-                }
-                // next_incoming() only returns Err() on fatal errors.
-                Err(e) => break Err(e),
-            }
-        };
-
-        if let Err(_e) = e {
-            // TODO: emit session error log?
+        // Helper macro to quickly create a context given a state variable.
+        macro_rules! context {
+            ($state:ident) => {
+                IrcContext::new(
+                    self.storage.as_ref(),
+                    &mut session,
+                    &mut self.r_tx,
+                    &mut self.s_tx,
+                    &mut self.c_tx,
+                    $state,
+                )
+            };
         }
 
-        // TODO better error cleanup.
-        self.r_rx
-            .into_inner()
-            .unsplit(self.r_tx)
-            .shutdown()
-            .await
-            .unwrap();
-        // The other comms primitives are in-process only, not external, so just
-        // dropping them is fine.
+        macro_rules! handle_signal {
+            ($ctx:expr, $signal:expr) => {
+                
+            }
+        }
+
+        // Helper macro to quickly define a state machine loop that
+        // only exits on a state /change/ or an error.
+        macro_rules! state_machine {
+            ($state:ident) => {
+                loop {
+                    let signal = self.next_incoming(&mut own_buf, &mut ref_buf).await?;
+
+                    let mut ctx = context!($state);
+                    let res = match signal {
+                        Signal::Timeout => {
+                            ctx.ping_keepalive().await.unwrap(); // TODO better error handling
+                            Ok(Old(ctx).into())
+                        }
+                        Signal::Client(msg) => command::route(ctx, msg).await,
+                        Signal::Server(msg) => todo!(),
+                        Signal::Channel(_name, msg) => {
+                            // For now, blindly assume the sender has performed
+                            // the full burden of verification and that all messages
+                            // sent over these IPC channels are valid and should
+                            // be sent to anyone subscribed.
+                            //
+                            // ALSO assume the channel message has the proper name
+                            // attached before sending.
+                            ctx.send_client(&msg).await?;
+                            Ok(Old(ctx).into())
+                        },
+                    };
+                    
+                    match res? {
+                        MaybeTransition::Old(o) => $state = o,
+                        MaybeTransition::New(n) => break n,
+                    }
+                }
+            };
+        }
+
+        let mut anon = state::Anonymous::default();
+        let mut reg: state::Registered = state_machine!(anon);
+        loop {
+            let mut auth: state::Authenticated = state_machine!(reg);
+            reg = state_machine!(auth);
+        }
     }
 
     /// Waits for the next incoming signal from timeout, client, channel, or server.
@@ -261,6 +252,11 @@ where
 
     async fn next_server_msg(reader: &mut ServerSource) -> IrcResult<ServerMessage> {
         Ok(reader.recv().await?)
+    }
+
+    async fn die_nice(self, _e: IrcSessionError) -> () {
+        // TODO handle graceful connection shutdown
+        let _ = self.r_rx.into_inner().unsplit(self.r_tx).shutdown().await;
     }
 }
 

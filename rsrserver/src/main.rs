@@ -9,6 +9,7 @@ use color_eyre::eyre::Result;
 
 use crate::{irc::IrcServer, tls::{TlsServer, TlsServerConfig}};
 
+mod ext;
 mod error;
 mod storage;
 mod tls;
