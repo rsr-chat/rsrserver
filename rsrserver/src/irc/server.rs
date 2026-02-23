@@ -13,7 +13,9 @@ use tokio_stream::{StreamExt, StreamMap};
 use crate::{
     error::{IrcResult, IrcSessionError},
     irc::{
-        ChannelName, ChannelSink, ChannelSource, ClientSink, ClientSource, GenericStateExt, IrcContext, IrcSession, ServerMessage, ServerSink, ServerSource, command, state::{self, MaybeTransition, Old, StateInto}
+        ChannelName, ChannelSink, ChannelSource, ClientSink, ClientSource, IrcContext, IrcSession,
+        ServerMessage, ServerSink, ServerSource, command,
+        state::{self, MaybeTransition, Old},
     },
     storage::Storage,
     tls::TlsHandler,
@@ -132,9 +134,7 @@ where
         }
 
         macro_rules! handle_signal {
-            ($ctx:expr, $signal:expr) => {
-                
-            }
+            ($ctx:expr, $signal:expr) => {};
         }
 
         // Helper macro to quickly define a state machine loop that
@@ -162,9 +162,9 @@ where
                             // attached before sending.
                             ctx.send_client(&msg).await?;
                             Ok(Old(ctx).into())
-                        },
+                        }
                     };
-                    
+
                     match res? {
                         MaybeTransition::Old(o) => $state = o,
                         MaybeTransition::New(n) => break n,

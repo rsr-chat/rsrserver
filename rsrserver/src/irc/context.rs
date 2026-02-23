@@ -79,13 +79,13 @@ impl<'a, T, S> IrcContext<'a, T, S> {
 }
 
 impl<T, S> IrcContext<'_, T, S>
-{
-    pub fn session(&self) -> &IrcSession {
-        &self.session
-    }
-    
+{    
     pub fn apply(self) -> T {
         self.typestate
+    }
+
+    pub fn session(&self) -> &IrcSession {
+        &self.session
     }
 
     pub fn session_mut(&mut self) -> &mut IrcSession {

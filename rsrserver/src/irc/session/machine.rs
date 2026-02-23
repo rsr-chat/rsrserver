@@ -21,22 +21,6 @@ where
     New(U),
 }
 
-pub trait IntoTransition<T, U>
-where
-    T: StateInto<U>,
-{
-    fn apply(self) -> MaybeTransition<T, U>;
-}
-
-impl<T, U> IntoTransition<T, U> for MaybeTransition<T, U>
-where
-    T: StateInto<U>,
-{
-    fn apply(self) -> MaybeTransition<T, U> {
-        self
-    }
-}
-
 impl<T> From<T> for Old<T> {
     fn from(value: T) -> Self {
         Old(value)
