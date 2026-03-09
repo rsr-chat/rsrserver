@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use thiserror::Error;
 use tokio::sync::broadcast::error::RecvError;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
@@ -41,7 +43,13 @@ pub enum IrcSessionError {
     ClientQUIT(String),
 }
 
-pub enum StorageError<E> {
-    
-    Backend(E),
+#[derive(Debug, Error)]
+pub enum StorageError {
+    /// An error occurred while migrating DB schema versions.
+    #[error("Error Migrating from schema version {from} -> {to}: {reason}")]
+    Migration {
+        from: u64,
+        to: u64,
+        reason: Box<dyn Error>
+    },
 }

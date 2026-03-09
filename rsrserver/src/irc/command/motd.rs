@@ -1,61 +1,42 @@
 use ircv3_parse::Message;
 
 use crate::{
-    error::IrcResult, ext::StrExt, irc::{GenericStateExt, IrcContext, command::CommandHandler, state}, storage::Storage
+    error::IrcResult,
+    ext::StrExt,
+    irc::{GenericStateExt, IrcContext, command::CommandHandler, state},
 };
 
 pub struct Motd;
 
-impl CommandHandler<state::Anonymous> for Motd {
-    type Contract = state::Anonymous;
+impl_command_handler!(Motd: state::Anonymous, async fn handle(ctx, msg) {
+    ctx.registration_required().await?;
+    Ok(ctx)
+});
 
-    async fn handle<'a, S: Storage>(
-        mut ctx: IrcContext<'a, state::Anonymous, S>,
-        _msg: Message<'a>,
-    ) -> IrcResult<impl Into<Self::Contract>> {
-        ctx.registration_required().await?;
-        Ok(ctx)
-    }
-}
+impl_command_handler!(Motd: state::Registered, async fn handle(ctx, msg) {
+    let nick = ctx.nick();
+    let nick = nick.slice_at_most(40);
 
-impl CommandHandler<state::Registered> for Motd {
-    type Contract = state::Registered;
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    let modes = ""; // Supported user and channel modes.
+    ctx.send(&format!(":* 422 {nick} rsr-{VERSION} * :{modes}\r\n"))
+        .await?;
 
-    async fn handle<'a, S: Storage>(
-        mut ctx: IrcContext<'a, state::Registered, S>,
-        _msg: Message<'a>,
-    ) -> IrcResult<impl Into<Self::Contract>> {
-        let nick = ctx.nick();
-        let nick = nick.slice_at_most(40);
+    // TODO: RPL_ISUPPORT?
 
-        const VERSION: &str = env!("CARGO_PKG_VERSION");
-        let modes = ""; // Supported user and channel modes.
-        ctx.send_client_unchecked(&format!(":* 422 {nick} rsr-{VERSION} * :{modes}\r\n"))
-            .await?;
+    Ok(ctx)
+});
 
-        // TODO: RPL_ISUPPORT?
+impl_command_handler!(Motd: state::Authenticated, async fn handle(ctx, msg) {
+    let nick = ctx.nick();
+    let nick = nick.slice_at_most(40);
 
-        Ok(ctx)
-    }
-}
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    let modes = ""; // Supported user and channel modes.
+    ctx.send(&format!(":* 422 {nick} rsr-{VERSION} * :{modes}\r\n"))
+        .await?;
 
-impl CommandHandler<state::Authenticated> for Motd {
-    type Contract = state::Authenticated;
+    // TODO: RPL_ISUPPORT?
 
-    async fn handle<'a, S: Storage>(
-        mut ctx: IrcContext<'a, state::Authenticated, S>,
-        _msg: Message<'a>,
-    ) -> IrcResult<impl Into<Self::Contract>> {
-        let nick = ctx.nick();
-        let nick = nick.slice_at_most(40);
-
-        const VERSION: &str = env!("CARGO_PKG_VERSION");
-        let modes = ""; // Supported user and channel modes.
-        ctx.send_client_unchecked(&format!(":* 422 {nick} rsr-{VERSION} * :{modes}\r\n"))
-            .await?;
-
-        // TODO: RPL_ISUPPORT?
-
-        Ok(ctx)
-    }
-}
+    Ok(ctx)
+});

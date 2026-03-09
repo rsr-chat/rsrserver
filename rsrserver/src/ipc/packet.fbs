@@ -1,0 +1,34 @@
+struct Timestamp {
+  unix_ms: int64;
+}
+
+struct Snowflake {
+  uid: uint64;
+}
+
+table Unknown {
+    data:   [ubyte];
+}
+
+table Message {
+    channel_id: Snowflake;
+    guild_id: Snowflake (required);
+    data:   [ubyte] (required);
+}
+
+table Timeout {
+    id: Snowflake (required);
+}
+
+union Signal {
+    Message:    Message,
+    Unknown:    Unknown,
+    Timeout:    Timeout,
+}
+
+table Packet {
+    timestamp:      Timestamp   (required);
+    origin_node:    string      (required);
+    signal:         Signal      (required);
+}
+

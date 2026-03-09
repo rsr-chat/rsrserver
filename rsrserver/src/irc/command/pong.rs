@@ -1,48 +1,39 @@
 use ircv3_parse::Message;
-use tokio::time::Instant;
+use tokio::{io::{AsyncBufRead, AsyncWrite}, time::Instant};
 
-use crate::{error::IrcResult, irc::{IrcContext, command::CommandHandler, state}, storage::Storage};
+use crate::{
+    error::IrcResult, ipc::IpcHandler, irc::{GenericStateExt, IrcContext, command::CommandHandler, state}, router::Router, storage::Storage
+};
 
 pub struct Pong;
 
-impl CommandHandler<state::Anonymous> for Pong {
-    type Contract = state::Anonymous;
+impl_command_handler!(Pong: state::Anonymous, async fn handle(ctx, msg) {
+    Self::handle_inner(&mut ctx, &msg).await?;
+    Ok(ctx)
+});
 
-    async fn handle<'a, S: Storage>(
-        mut ctx: IrcContext<'a, state::Anonymous, S>,
-        msg: Message<'a>,
-    ) -> IrcResult<impl Into<Self::Contract>> {
-        Self::handle_inner(&mut ctx, &msg).await?;
-        Ok(ctx)
-    }
-}
+impl_command_handler!(Pong: state::Registered, async fn handle(ctx, msg) {
+    Self::handle_inner(&mut ctx, &msg).await?;
+    Ok(ctx)
+});
 
-impl CommandHandler<state::Registered> for Pong {
-    type Contract = state::Registered;
-
-    async fn handle<'a, S: Storage>(
-        mut ctx: IrcContext<'a, state::Registered, S>,
-        msg: Message<'a>,
-    ) -> IrcResult<impl Into<Self::Contract>> {
-        Self::handle_inner(&mut ctx, &msg).await?;
-        Ok(ctx)
-    }
-}
-
-impl CommandHandler<state::Authenticated> for Pong {
-    type Contract = state::Authenticated;
-
-    async fn handle<'a, S: Storage>(
-        mut ctx: IrcContext<'a, state::Authenticated, S>,
-        msg: Message<'a>,
-    ) -> IrcResult<impl Into<Self::Contract>> {
-        Self::handle_inner(&mut ctx, &msg).await?;
-        Ok(ctx)
-    }
-}
+impl_command_handler!(Pong: state::Authenticated, async fn handle(ctx, msg) {
+    Self::handle_inner(&mut ctx, &msg).await?;
+    Ok(ctx)
+});
 
 impl Pong {
-    async fn handle_inner<'a, T, S: Storage>(ctx: &mut IrcContext<'a, T, S>, msg: &Message<'a>) -> IrcResult<()> {
+    async fn handle_inner<'a, T, S, Rt, Rx, Tx>(
+        ctx: &mut IrcContext<'a, T, S, Router<Rt, Rx, Tx>>,
+        msg: &Message<'a>,
+    ) -> IrcResult<()>
+    where
+        T: GenericStateExt,
+        S: Storage,
+        Rt: IpcHandler,
+        Rx: AsyncBufRead,
+        Tx: AsyncWrite,
+    {
         // Are we waiting on a PONG?
         let Some((deadline, expected_token)) = ctx.session_mut().ping_deadline() else {
             // Drop PONG messages when we're not waiting for any.

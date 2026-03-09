@@ -6,9 +6,13 @@ use std::sync::Arc;
 use color_eyre::eyre::Result;
 use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use tokio::io::BufReader;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_rustls::server::TlsStream;
 use tokio_rustls::{TlsAcceptor, rustls};
+
+pub type ClientSource = BufReader<tokio::io::ReadHalf<tokio_rustls::server::TlsStream<tokio::net::TcpStream>>>;
+pub type ClientSink = tokio::io::WriteHalf<tokio_rustls::server::TlsStream<tokio::net::TcpStream>>;
 
 pub struct TlsServerConfig {
     pub addr: SocketAddr,
@@ -78,7 +82,7 @@ impl TlsServer {
     }
 }
 
-pub trait TlsHandler: Send + Sync + 'static {
+pub trait TlsHandler: Send + Sync {
     type Future: AsyncFuture<()>;
 
     fn handle(

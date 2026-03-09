@@ -1,5 +1,5 @@
-
 mod server;
+use ircv3_parse::{Message, message::ser::ToMessage};
 pub use server::*;
 
 mod session;
@@ -11,20 +11,16 @@ pub use context::*;
 mod capability;
 pub use capability::*;
 
+use crate::error::IrcResult;
+
 pub mod command;
 
-use std::sync::Arc;
-use bytes::Bytes;
-use tokio::io::BufReader;
+pub trait IntoMessage {
+    fn into_message<'a>(&'a self) -> IrcResult<Message<'a>>;
+}
 
-type ClientSource = BufReader<tokio::io::ReadHalf<tokio_rustls::server::TlsStream<tokio::net::TcpStream>>>;
-type ClientSink = tokio::io::WriteHalf<tokio_rustls::server::TlsStream<tokio::net::TcpStream>>;
-
-type ServerSource = tokio::sync::broadcast::Receiver<ServerMessage>;
-type ServerSink = tokio::sync::broadcast::WeakSender<ServerMessage>;
-
-type ChannelSource = tokio_stream::wrappers::BroadcastStream<Arc<Bytes>>;
-type ChannelSink = tokio::sync::broadcast::WeakSender<Arc<Bytes>>;
-
-pub type ChannelName = Arc<str>;
-pub type ServerMessage = ();
+impl<T> IntoMessage for T where T: AsRef<str> {
+    fn into_message<'a>(&'a self) -> IrcResult<Message<'a>> {
+        Ok(ircv3_parse::parse(self.as_ref())?)
+    }
+}

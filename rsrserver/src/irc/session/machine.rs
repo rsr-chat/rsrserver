@@ -51,20 +51,20 @@ where
     }
 }
 
-impl<T, U, S> From<Old<IrcContext<'_, T, S>>> for MaybeTransition<T, U>
+impl<T, U, S, R> From<Old<IrcContext<'_, T, S, R>>> for MaybeTransition<T, U>
 where
     T: StateInto<U>,
 {
-    fn from(value: Old<IrcContext<'_, T, S>>) -> Self {
+    fn from(value: Old<IrcContext<'_, T, S, R>>) -> Self {
         MaybeTransition::Old(value.0.apply())
     }
 }
 
-impl<T, U, S> From<New<IrcContext<'_, U, S>>> for MaybeTransition<T, U>
+impl<T, U, S, R> From<New<IrcContext<'_, U, S, R>>> for MaybeTransition<T, U>
 where
     T: StateInto<U>,
 {
-    fn from(value: New<IrcContext<'_, U, S>>) -> Self {
+    fn from(value: New<IrcContext<'_, U, S, R>>) -> Self {
         MaybeTransition::New(value.0.apply())
     }
 }
